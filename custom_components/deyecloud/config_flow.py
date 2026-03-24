@@ -2,12 +2,13 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 import aiohttp
-from .const import DOMAIN, CONF_USERNAME, CONF_PASSWORD, CONF_APP_ID, CONF_APP_SECRET, CONF_BASE_URL, CONF_START_MONTH    
+from .const import DOMAIN, CONF_USERNAME, CONF_PASSWORD, CONF_APP_ID, CONF_APP_SECRET, CONF_BASE_URL, CONF_START_MONTH, CONF_SERIAL_NUMBER
 from .api import async_get_token
 
 DATA_SCHEMA = vol.Schema({
     vol.Required(CONF_USERNAME): str,
     vol.Required(CONF_PASSWORD): str,
+    vol.Required(CONF_SERIAL_NUMBER): str,
     vol.Required(CONF_APP_ID): str,
     vol.Required(CONF_APP_SECRET): str,
     vol.Required(CONF_BASE_URL, default="https://eu1-developer.deyecloud.com/v1.0"): str,
@@ -76,6 +77,7 @@ class DeyeCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_USERNAME, default=current_data.get(CONF_USERNAME)): str,
                 vol.Required(CONF_PASSWORD, default=current_data.get(CONF_PASSWORD)): str,
+                vol.Required(CONF_SERIAL_NUMBER, default=current_data.get(CONF_SERIAL_NUMBER)): str,
                 vol.Required(CONF_APP_ID, default=current_data.get(CONF_APP_ID)): str,
                 vol.Required(CONF_APP_SECRET, default=current_data.get(CONF_APP_SECRET)): str,
                 vol.Required(CONF_BASE_URL, default=current_data.get(CONF_BASE_URL, "https://eu1-developer.deyecloud.com/v1.0")): str,
