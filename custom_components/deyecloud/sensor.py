@@ -1,34 +1,19 @@
-import logging
-from datetime import timedelta, datetime, date
-from dateutil.relativedelta import relativedelta
 import hashlib
-import json
-import os
-import aiohttp
-import aiofiles
-import asyncio
+import logging
+from datetime import date, datetime, timedelta
 
-from homeassistant.util import dt as dt_util
+import aiofiles
+import aiohttp
+from dateutil.relativedelta import relativedelta
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    CoordinatorEntity,
-    UpdateFailed,
-)
+from homeassistant.helpers.update_coordinator import (CoordinatorEntity, DataUpdateCoordinator, UpdateFailed)
+from homeassistant.util import dt as dt_util
 
-from .const import (
-    DOMAIN,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    CONF_SERIAL_NUMBER,
-    CONF_APP_ID,
-    CONF_APP_SECRET,
-    CONF_BASE_URL,
-    CONF_START_MONTH,
-)
+from .const import (CONF_APP_ID, CONF_APP_SECRET, CONF_BASE_URL, CONF_PASSWORD, CONF_SERIAL_NUMBER, CONF_START_MONTH,
+                    CONF_USERNAME, DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=1)
@@ -58,7 +43,7 @@ async def _async_get_token(session: aiohttp.ClientSession, username, password, a
     _LOGGER.debug("Requesting token from API: %s", url)
     payload = {
         "appSecret": app_secret,
-        "username": username,
+        "email": username,
         "password": _sha256(password),
     }
     async with session.post(url, json=payload, timeout=10) as resp:
