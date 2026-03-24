@@ -23,6 +23,7 @@ from .const import (
     DOMAIN,
     CONF_USERNAME,
     CONF_PASSWORD,
+    CONF_SERIAL_NUMBER,
     CONF_APP_ID,
     CONF_APP_SECRET,
     CONF_BASE_URL,
@@ -148,6 +149,7 @@ async def _async_daily_history(session, token, station_id, base_url, start_date,
 async def _async_get_device_list(session, token, base_url, stations):
     url = f"{base_url}/station/device"
     _LOGGER.debug("Fetching device list from API: %s", url)
+    serial_number = self.entry.data[CONF_SERIAL_NUMBER]
     headers = {"Authorization": f"Bearer {token}"}
     station_ids = [st.get("id") or st.get("stationId") for st in stations if st.get("id") or st.get("stationId")]
     if not station_ids:
@@ -166,7 +168,7 @@ async def _async_get_device_list(session, token, base_url, stations):
             _LOGGER.error("Device list request failed: %s", j.get("msg"))
             raise Exception(f"Device list request failed: {j.get('msg')}")
         _LOGGER.debug("Received device list: %s", j)
-        return [item["deviceSn"] for item in j.get("deviceListItems", []) if item.get("deviceType") == "INVERTER"]
+        return [item["deviceSn"] for item in j.get("deviceListItems", []) if item.get("deviceType") == "INVERTER" and item['deviceSn'] == serial_number]
 
 
 async def _async_get_device_status(session, token, base_url, device_list):
@@ -203,6 +205,7 @@ class DeyeCloudCoordinator(DataUpdateCoordinator):
         """Fetch data from API."""
         username = self.entry.data[CONF_USERNAME]
         password = self.entry.data[CONF_PASSWORD]
+        serial_number = self.entry.data[CONF_SERIAL_NUMBER]
         app_id = self.entry.data[CONF_APP_ID]
         app_secret = self.entry.data[CONF_APP_SECRET]
         base_url = self.entry.data[CONF_BASE_URL]
@@ -233,6 +236,7 @@ class DeyeCloudCoordinator(DataUpdateCoordinator):
             station_tasks = []
             for station in stations:
                 station_id = station.get("id") or station.get("stationId")
+                
                 if station_id:
                     station_tasks.append(self._async_update_station_data(session, station_id, base_url, station))
 
@@ -249,6 +253,7 @@ class DeyeCloudCoordinator(DataUpdateCoordinator):
     async def _async_update_station_data(self, session, station_id, base_url, station_info):
         """Fetch data for a single station."""
         data = {"info": station_info, "history": [], "daily": {}, "devices": {}}
+        serial_number = self.entry.data[CONF_SERIAL_NUMBER]
 
         try:
             # Fetch monthly history
