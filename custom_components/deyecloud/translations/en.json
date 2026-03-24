@@ -4,6 +4,9 @@
     "step": {
       "user": {
         "title": "Connect to DeyeCloud"
+      },
+      "reconfigure": {
+        "title": "Reconfigure DeyeCloud"
       }
     }
   }

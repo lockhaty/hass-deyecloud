@@ -146,10 +146,9 @@ async def _async_daily_history(session, token, station_id, base_url, start_date,
         return items
 
 
-async def _async_get_device_list(session, token, base_url, stations):
+async def _async_get_device_list(session, token, base_url, stations, serial_number):
     url = f"{base_url}/station/device"
     _LOGGER.debug("Fetching device list from API: %s", url)
-    serial_number = self.entry.data[CONF_SERIAL_NUMBER]
     headers = {"Authorization": f"Bearer {token}"}
     station_ids = [st.get("id") or st.get("stationId") for st in stations if st.get("id") or st.get("stationId")]
     if not station_ids:
@@ -231,22 +230,33 @@ class DeyeCloudCoordinator(DataUpdateCoordinator):
             except Exception as exc:
                 raise UpdateFailed(f"Error fetching stations: {exc}") from exc
 
-            # Fetch data for each station concurrently
-            station_data = {}
-            station_tasks = []
+            # Find which station contains the target serial number
+            target_station = None
             for station in stations:
                 station_id = station.get("id") or station.get("stationId")
-                
-                if station_id:
-                    station_tasks.append(self._async_update_station_data(session, station_id, base_url, station))
+                if not station_id:
+                    continue
+                device_sns = await _async_get_device_list(
+                    session, self.token, base_url, [station], serial_number
+                )
+                if device_sns:
+                    target_station = station
+                    break
 
-            results = await asyncio.gather(*station_tasks, return_exceptions=True)
-            for result in results:
-                if isinstance(result, Exception):
-                    _LOGGER.error("Error updating station data: %s", result)
-                elif result:
-                    station_id, data = result
-                    station_data[station_id] = data
+            if not target_station:
+                raise UpdateFailed(
+                    f"Serial number {serial_number} not found in any station"
+                )
+
+            station_id = target_station.get("id") or target_station.get("stationId")
+            result = await self._async_update_station_data(
+                session, station_id, base_url, target_station
+            )
+
+            station_data = {}
+            if result:
+                sid, data = result
+                station_data[sid] = data
 
             return station_data
 
@@ -285,7 +295,7 @@ class DeyeCloudCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Using first daily record for %s: %s", start_date, daily_data[0])
 
             # Fetch devices
-            device_sns = await _async_get_device_list(session, self.token, base_url, [station_info])
+            device_sns = await _async_get_device_list(session, self.token, base_url, [station_info], serial_number)
             if device_sns:
                 device_status = await _async_get_device_status(session, self.token, base_url, device_sns)
                 for device in device_status:
